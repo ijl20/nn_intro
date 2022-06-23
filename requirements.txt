@@ -1,1 +1,5 @@
+wheel
+numpy
 notebook
+tensorflow
+matplotlib
