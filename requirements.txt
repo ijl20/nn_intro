@@ -3,3 +3,4 @@ numpy
 notebook
 tensorflow
 matplotlib
+tqdm

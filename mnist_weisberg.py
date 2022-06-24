@@ -59,7 +59,7 @@ def compute_loss(Y, Y_hat):
 
     return L
 
-def run():
+def run_w():
     learning_rate = 1
 
     (X_train, y_train),(X_test, y_test) = load_dataset()
@@ -90,11 +90,58 @@ def run():
 
         cost = compute_loss(Y, A)
 
+        # Calculate partial differentials
         dW = (1/m) * np.matmul(X, (A-Y).T)
         db = (1/m) * np.sum(A-Y, axis=1, keepdims=True)
 
+        # update weights
         W = W - learning_rate * dW
         b = b - learning_rate * db
+
+        if (i % 100 == 0):
+            print("Epoch", i, "cost: ", cost)
+
+    print("Final cost:", cost)
+
+def run_i():
+    learning_rate = 1
+
+    (X_train, y_train),(X_test, y_test) = load_dataset()
+
+    X = X_train.reshape([X_train.shape[0],-1]).T # 60000 x 28 x 28 -> 60000 x 784 -> 784 x 60000
+
+    print("Input matrix X is",X.shape)
+
+    x_width = X.shape[0]
+    print("input width is", x_width)        # 724
+    x_samples = X.shape[1]
+    print("x samples count is ", x_samples) # 60000
+
+    # Convert MNIST ground truth from 0..9 to 0..1 where 1 => ZERO
+    Y = zero_one(y_train).reshape(1,x_samples)
+
+    print("Truth matrix Y is", Y.shape)
+
+    # Create (784,1) weight matrix initialised with small random numbers
+    W = np.random.randn(x_width, 1) * 0.01
+    print("Weight matrix W is ", W.shape)
+
+    # Bias is 1 x 1
+    b = np.zeros((1, 1))
+
+    for i in range(2000):
+        Z = np.matmul(W.T, X) + b
+        Y_hat = sigmoid(Z)
+
+        cost = compute_loss(Y, Y_hat)
+
+        # Calculate step deltas
+        delta_W = (1/m) * np.matmul(X, (Y_hat-Y).T)
+        delta_b = (1/m) * np.sum(Y_hat-Y, axis=1, keepdims=True)
+
+        # update weights
+        W = W - learning_rate * delta_W
+        b = b - learning_rate * delta_b
 
         if (i % 100 == 0):
             print("Epoch", i, "cost: ", cost)
