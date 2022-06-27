@@ -1,14 +1,30 @@
 
 # https://towardsdatascience.com/building-neural-network-from-scratch-9c88535bf8e9
 
+# Load this file into Python with:
+# >>> exec(open("mnist_agrawal2.py").read())
+
+# Train network with:
+# >>> train(net_agrawal)
+
+# Note that training does NOT use the X_test images in any way
+
+# Predict image with
+# >>> predict(net_agrawal, [ X_test[0] ])
+
+# Check 1st 10 test predictions:
+# for i in range(10):
+#     p = predict(net_agrawal,[X_test[i]])
+#     print(f"Image {i} predict {p} vs {y_test[i]}")
+
 from __future__ import print_function
 import numpy as np ## For numerical python
 import tensorflow.keras as keras
 from tqdm import trange
-#from IPython.display import clear_output
+from IPython.display import clear_output
 
-# import matplotlib.pyplot as plt
-# %matplotlib inline
+import matplotlib.pyplot as plt
+# %matplotlib inline                 # UNCOMMENT for JUPYTER
 
 np.random.seed(42)
 
@@ -31,6 +47,7 @@ class Layer:
 
         # A dummy layer just returns whatever it gets as input.
         return input
+
     def backward(self, input, grad_output):
         # Performs a backpropagation step through the layer, with respect to the given input.
         # To compute loss gradients w.r.t input, we need to apply chain rule (backprop):
@@ -129,15 +146,15 @@ def load_dataset(flatten=False):
         X_test = X_test.reshape([X_test.shape[0], -1])
     return X_train, y_train, X_val, y_val, X_test, y_test
 
+# Compute activations of all network layers by applying them sequentially.
+# Return a LIST of LISTS: activations for each layer.
 def forward(network, X):
-    # Compute activations of all network layers by applying them sequentially.
-    # Return a list of activations for each layer.
 
     activations = []
     input = X
-    # Looping through each layer
-    for l in network:
-        activations.append(l.forward(input))
+    # Looping through each layer passing output of each as input of next
+    for layer in network:
+        activations.append(layer.forward(input))
         # Updating input to last layer output
         input = activations[-1]
 
@@ -149,7 +166,7 @@ def predict(network,X):
     logits = forward(network,X)[-1]
     return logits.argmax(axis=-1)
 
-def train(network,X,y):
+def train_batch(network,X,y):
     # Train our network on a given batch of X and y.
     # We first need to run forward to get all layer activations.
     # Then we can run layer.backward going from last to first layer.
@@ -158,7 +175,7 @@ def train(network,X,y):
 
     # Get the layer activations
     layer_activations = forward(network,X)
-    layer_inputs = [X]+layer_activations  #layer_input[i] is an input for network[i]
+    layer_inputs = [X]+layer_activations  # NOTE "+" here concatenates [X] and layer_activations. layer_input[i] is an input for network[i]
     logits = layer_activations[-1]
 
     # Compute the loss and the initial gradient
@@ -174,6 +191,7 @@ def train(network,X,y):
 
     return np.mean(loss)
 
+# An untested function to work out if we're running in IPython/Jupyter or not (returns False ok in Python command line)
 def in_ipython():
     try:
         x = get_ipython()
@@ -181,6 +199,7 @@ def in_ipython():
     except NameError:
         return False
 
+# Python ITERATOR that yeilds slices of X and y
 def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
     assert len(inputs) == len(targets)
     if shuffle:
@@ -192,35 +211,24 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
             excerpt = slice(start_idx, start_idx + batchsize)
         yield inputs[excerpt], targets[excerpt]
 
-X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(flatten=True)
-
-def net_agrawal():
-    network = []
-    network.append(Dense(X_train.shape[1],100))
-    network.append(ReLU())
-    network.append(Dense(100,200))
-    network.append(ReLU())
-    network.append(Dense(200,10))
-    return network
-
-def run(network):
-    train_log = []
+def train(network, batchsize=32, shuffle=True):
+    train_accuracy = []
     val_log = []
     for epoch in range(25):
         print("Epoch",epoch)
 
-        for x_batch,y_batch in iterate_minibatches(X_train,y_train,batchsize=32,shuffle=True):
-            train(network,x_batch,y_batch)
+        for x_batch,y_batch in iterate_minibatches(X_train,y_train,batchsize=batchsize,shuffle=shuffle):
+            train_batch(network,x_batch,y_batch)
 
-        train_log.append(np.mean(predict(network,X_train)==y_train))
+        train_accuracy.append(np.mean(predict(network,X_train)==y_train))
         val_log.append(np.mean(predict(network,X_val)==y_val))
 
         if in_ipython():
             clear_output()
-        print("Train accuracy:",train_log[-1])
+        print("Train accuracy:",train_accuracy[-1])
         print("Val accuracy:",val_log[-1])
         if in_ipython():
-            plt.plot(train_log,label='train accuracy')
+            plt.plot(train_accuracy,label='train accuracy')
             plt.plot(val_log,label='val accuracy')
             plt.legend(loc='best')
             plt.grid()
@@ -234,4 +242,27 @@ def run(network):
             plt.title("Label: %i"%y_train[i])
             plt.imshow(X_train[i].reshape([28,28]),cmap='gray');
 
-run(net_agrawal())
+# Print a 784 x 1 image to the console
+def print_image(image):
+    for i in range(28):
+        for j in range(28):
+            print( '  ' if image[i*28+j] > 0.5 else '00', end='')
+        print()
+
+X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(flatten=True)
+
+print(f"X_train is {X_train.shape}")
+print(f"X_val is {X_val.shape}")
+print(f"X_test is {X_test.shape}")
+print("X_test[0] is:")
+print_image(X_test[0])
+
+net_agrawal = [
+    Dense(784,100),
+    ReLU(),
+    Dense(100,200),
+    ReLU(),
+    Dense(200,10)
+]
+
+# train(net_agrawal)
