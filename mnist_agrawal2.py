@@ -1,16 +1,12 @@
 
 # https://towardsdatascience.com/building-neural-network-from-scratch-9c88535bf8e9
 
-# Load this file into Python with:
+# Typical usage:
 # >>> exec(open("mnist_agrawal2.py").read())
-
-# Train network with:
 # >>> train(net_agrawal)
+# >>> predict(net_agrawal, [ X_test[0] ])
 
 # Note that training does NOT use the X_test images in any way
-
-# Predict image with
-# >>> predict(net_agrawal, [ X_test[0] ])
 
 # Check 1st 10 test predictions:
 # for i in range(10):
@@ -161,10 +157,23 @@ def forward(network, X):
     assert len(activations) == len(network)
     return activations
 
+# predict(network layer list, samples array)
+# X.shape is (N,784), i.e. a list of flattened MNIST images
+# logits.shape is (N,10)
+# return shape is (N,) i.e. a list of categories (0..9), one for each input image
 def predict(network,X):
     # Compute network predictions. Returning indices of largest Logit probability
-    logits = forward(network,X)[-1]
-    return logits.argmax(axis=-1)
+    logits = forward(network,X)[-1] # forward() returns the entire network stack of output values, so the final [-1] set is net output
+
+    return logits.argmax(axis=-1) # argmax returns the index of the highest element
+
+# infer() is the same as predict(), but for a single image and printing more readable results
+def infer(network, image):
+    logits = forward(network,[image])[-1] # as predict(), converting image into a list
+    # logits.shape is (1,10), i.e. the output of the final layer for a single image
+    print_image(image)
+    print_logits(logits[0])
+    print_category(logits.argmax(axis=-1))
 
 def train_batch(network,X,y):
     # Train our network on a given batch of X and y.
@@ -212,24 +221,28 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
         yield inputs[excerpt], targets[excerpt]
 
 def train(network, batchsize=32, shuffle=True):
+    # We'll accumulate a log of accuracy figures for the training dataset and validation data set
     train_accuracy = []
-    val_log = []
-    for epoch in range(25):
+    val_accuracy = []
+
+    for epoch in range(8): # Was 25 epochs
         print("Epoch",epoch)
 
+        # With default batch size of 32, and 50,000 samples, this will iterate through 1562 batches
+        # iterate_minibatches simply chops up X_train, y_train into 32-
         for x_batch,y_batch in iterate_minibatches(X_train,y_train,batchsize=batchsize,shuffle=shuffle):
             train_batch(network,x_batch,y_batch)
 
         train_accuracy.append(np.mean(predict(network,X_train)==y_train))
-        val_log.append(np.mean(predict(network,X_val)==y_val))
+        val_accuracy.append(np.mean(predict(network,X_val)==y_val))
 
         if in_ipython():
             clear_output()
         print("Train accuracy:",train_accuracy[-1])
-        print("Val accuracy:",val_log[-1])
+        print("Val accuracy:",val_accuracy[-1])
         if in_ipython():
             plt.plot(train_accuracy,label='train accuracy')
-            plt.plot(val_log,label='val accuracy')
+            plt.plot(val_accuracy,label='val accuracy')
             plt.legend(loc='best')
             plt.grid()
             plt.show()
@@ -248,6 +261,39 @@ def print_image(image):
         for j in range(28):
             print( '  ' if image[i*28+j] > 0.5 else '00', end='')
         print()
+
+# Print logits
+def print_logits(logits):
+    for n in logits:
+        print(f"{n:.3f} ",end='')
+    print()
+
+# Print category, e.g. 0 -> "ZERO"
+# Python 3.10 only
+def print_category(n):
+    match n:
+        case 0:
+            print("ZERO")
+        case 1:
+            print("ONE")
+        case 2:
+            print("TWO")
+        case 3:
+            print("THREE")
+        case 4:
+            print("FOUR")
+        case 5:
+            print("FIVE")
+        case 6:
+            print("SIX")
+        case 7:
+            print("SEVEN")
+        case 8:
+            print("EIGHT")
+        case 9:
+            print("NINE")
+        case _:
+            print("ERROR")
 
 X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(flatten=True)
 
