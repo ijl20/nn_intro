@@ -265,7 +265,10 @@ def print_image(image):
 # Print logits
 def print_logits(logits):
     for n in logits:
-        print(f"{n:.3f} ",end='')
+        if (n<0):
+            print(f"{n:.3f} ",end='')
+        else:
+            print(f" {n:.3f} ",end='')
     print()
 
 # Print category, e.g. 0 -> "ZERO"
@@ -309,6 +312,12 @@ net_agrawal = [
     Dense(100,200),
     ReLU(),
     Dense(200,10)
+]
+
+net_lewis = [
+    Dense(784,100),
+    ReLU(),
+    Dense(100,10)
 ]
 
 # train(net_agrawal)
