@@ -52,7 +52,7 @@ class Layer:
         # Takes input data of shape [batch, input_units], returns output data [batch, output_units]
 
         # A dummy layer just returns whatever it gets as input.
-        return inputA prototype for the crowd counting and positioning sensor is largely complete (there are optimisations being explored given characteristics of the particular use case). The current status of this mini-project is to gain ethics approval within the University, the process for which is ongoing.
+        return input
 
     def backward(self, input, grad_output):
         # Performs a backpropagation step through the layer, with respect to the given input.
