@@ -126,13 +126,19 @@ class Dense(Layer):
 # ***** Origin: https://github.com/enggen/Deep-Learning-Coursera  *****
 # *********************************************************************
 
+# E.g. X_test.shape is (10000,784)
+# X_test[0].shape is (784,)
+# X_test_conv = X_test.reshape(-1,28,28.1)
 def zero_pad(X, pad):
     """
     Pad with zeros all images of the dataset X. The padding is applied to the height and width of an image,
     as illustrated in Figure 1.
 
     Argument:
-    X -- python numpy array of shape (m, n_H, n_W, n_C) representing a batch of m images
+    X -- python numpy array of shape (m, img_height, img_width, img_depth) representing:
+        m : image batch size
+        img_height x img_width : pixel h x w = size of images
+        img_depth : colors e.g. RGB = 3
     pad -- integer, amount of padding around each image on vertical and horizontal dimensions
 
     Returns:
@@ -147,71 +153,85 @@ def zero_pad(X, pad):
 
 # GRADED FUNCTION: conv_single_step
 
-def conv_single_step(a_slice_prev, W, b):
+def conv_single_step(img_patch, filter_W, filter_b):
     """
     Apply one filter defined by parameters W on a single slice (a_slice_prev) of the output activation
     of the previous layer.
 
     Arguments:
-    a_slice_prev -- slice of input data of shape (f, f, n_C_prev)
-    W -- Weight parameters contained in a window - matrix of shape (f, f, n_C_prev)
-    b -- Bias parameters contained in a window - matrix of shape (1, 1, 1)
+    Note filter size is f x f, with the same depth as the input image
+    img_patch -- slice of input data of shape (f, f, depth_in)
+    filter_W -- Weight parameters contained in a window - matrix of shape (f, f, depth_in)
+    filter_b -- Bias parameters contained in a window - matrix of shape (1, 1, 1)
 
     Returns:
     Z -- a scalar value, result of convolving the sliding window (W, b) on a slice x of the input data
     """
 
+    #print("conv_single_step img_patch:", img_patch.shape)
+    #print(img_patch)
+
+    #print("conv_single_step filter_W:", filter_W.shape)
+    #print(filter_W)
+
     ### START CODE HERE ### (≈ 2 lines of code)
     # Element-wise product between a_slice and W. Do not add the bias yet.
-    s = np.multiply(a_slice_prev, W)
+    s = np.multiply(img_patch, filter_W)
+
+    #print("conv_single_step s:", s.shape)
+    #print(s)
+
     # Sum over all entries of the volume s.
     Z = np.sum(s)
+    #print("conv_single_step Z:", Z)
+
     # Add bias b to Z. Cast b to a float() so that Z results in a scalar value.
-    Z = Z + float(b)
+    Z = Z + float(filter_b)
     ### END CODE HERE ###
 
     return Z
 
 # Note here we're use for loops rather than Python vectorization
-def conv_forward(A_prev, W, b, hparameters):
+def conv_forward(input, W, b, hparameters):
     """
     Implements the forward propagation for a convolution function
 
     Arguments:
-    A_prev -- output activations of the previous layer, numpy array of shape (m, n_H_prev, n_W_prev, n_C_prev)
-    W -- Weights, numpy array of shape (f, f, n_C_prev, n_C)
+    input -- output activations of the previous layer,
+             numpy array of shape (count, height_in, width_in, depth_in)
+    W -- Weights, numpy array of shape (f, f, depth_in, n_C)
     b -- Biases, numpy array of shape (1, 1, 1, n_C)
     hparameters -- python dictionary containing "stride" and "pad"
 
     Returns:
-    Z -- conv output, numpy array of shape (m, n_H, n_W, n_C)
+    Z -- conv output, numpy array of shape (count, n_H, n_W, n_C)
     cache -- cache of values needed for the conv_backward() function
     """
 
     ### START CODE HERE ###
-    # Retrieve dimensions from A_prev's shape (≈1 line)
-    (m, n_H_prev, n_W_prev, n_C_prev) = A_prev.shape
+    # Retrieve dimensions from input's shape (≈1 line)
+    (count, height_in, width_in, depth_in) = input.shape
 
     # Retrieve dimensions from W's shape (≈1 line)
-    (f, f, n_C_prev, n_C) = W.shape
+    (f, f, depth_in, n_C) = W.shape
 
     # Retrieve information from "hparameters" (≈2 lines)
     stride = hparameters['stride']
     pad = hparameters['pad']
 
     # Compute the dimensions of the CONV output volume using the formula given above. Hint: use int() to floor. (≈2 lines)
-    n_H = int((n_H_prev - f + 2 * pad) / stride) + 1
-    n_W = int((n_W_prev - f + 2 * pad) / stride) + 1
+    n_H = int((height_in - f + 2 * pad) / stride) + 1
+    n_W = int((width_in - f + 2 * pad) / stride) + 1
 
     # Initialize the output volume Z with zeros. (≈1 line)
-    Z = np.zeros((m, n_H, n_W, n_C))
+    Z = np.zeros((count, n_H, n_W, n_C))
     # Define matrix A, output after activation here A = np.array(Z.shape)
 
-    # Create A_prev_pad by padding A_prev
-    A_prev_pad = zero_pad(A_prev, pad)
+    # Create input_pad by padding input
+    input_pad = zero_pad(input, pad)
 
-    for i in range(m):                               # loop over the batch of training examples
-        a_prev_pad = A_prev_pad[i]                               # Select ith training example's padded activation
+    for i in range(count):                                 # loop over the batch of training examples
+        example_img = input_pad[i]                     # Select ith training example's padded activation
         for h in range(n_H):                           # loop over vertical axis of the output volume
             for w in range(n_W):                       # loop over horizontal axis of the output volume
                 for c in range(n_C):                   # loop over channels (= #filters) of the output volume
@@ -222,19 +242,19 @@ def conv_forward(A_prev, W, b, hparameters):
                     horiz_start = w * stride
                     horiz_end = horiz_start + f
 
-                    # Use the corners to define the (3D) slice of a_prev_pad (See Hint above the cell). (≈1 line)
-                    a_slice_prev = a_prev_pad[vert_start:vert_end, horiz_start:horiz_end, :]
+                    # Use the corners to define the (3D) slice of example_img (See Hint above the cell). (≈1 line)
+                    img_patch = example_img[vert_start:vert_end, horiz_start:horiz_end, :]
 
                     # Convolve the (3D) slice with the correct filter W and bias b, to get back one output neuron. (≈1 line)
-                    Z[i, h, w, c] = conv_single_step(a_slice_prev, W[...,c], b[...,c])
+                    Z[i, h, w, c] = conv_single_step(img_patch, W[...,c], b[...,c])
                     # Add activation here: A[i, h, w, c] = activation(Z[i, h, w, c])
     ### END CODE HERE ###
 
     # Making sure your output shape is correct
-    assert(Z.shape == (m, n_H, n_W, n_C))
+    assert(Z.shape == (count, n_H, n_W, n_C))
 
     # Save information in "cache" for the backprop
-    cache = (A_prev, W, b, hparameters)
+    cache = (input, W, b, hparameters)
 
     # Alternatively return A
     return Z, cache
@@ -242,12 +262,20 @@ def conv_forward(A_prev, W, b, hparameters):
 # Note call with e.g.
 # np.random.seed(1)
 # A_prev = np.random.randn(10,4,4,3)
+# E.g. for 2 x 2 x 3 filters, x8:
 # W = np.random.randn(2,2,3,8)
 # b = np.random.randn(1,1,1,8)
 # hparameters = {"pad" : 2,
 #               "stride": 2}
 
 # Z, cache_conv = conv_forward(A_prev, W, b, hparameters)
+def conv():
+    W = np.random.randn(3,3,1,8)
+    b = np.random.randn(1,1,1,8)
+    hparams = { "pad": 2, "stride": 2}
+    X_train_conv = X_train.reshape(-1,28,28,1)
+    Z, cache = conv_forward(X_train_conv, W, b, hparams)
+
 # print("Z's mean =", np.mean(Z))
 # print("Z[3,2,1] =", Z[3,2,1])
 # print("cache_conv[0][1][2][3] =", cache_conv[0][1][2][3])
