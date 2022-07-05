@@ -274,7 +274,8 @@ def conv():
     b = np.random.randn(1,1,1,8)
     hparams = { "pad": 2, "stride": 2}
     X_train_conv = X_train.reshape(-1,28,28,1)
-    Z, cache = conv_forward(X_train_conv, W, b, hparams)
+    # Test train on first 100 images
+    Z, cache = conv_forward(X_train_conv[:100], W, b, hparams)
 
 # print("Z's mean =", np.mean(Z))
 # print("Z[3,2,1] =", Z[3,2,1])
