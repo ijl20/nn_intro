@@ -540,7 +540,7 @@ class Pooling(Layer):
 
         return d_input
 
-def conf_run():
+def conv_run():
     # Test train on first 100 images
     X_train_conv = X_train.reshape(-1,28,28,1)[:100]
 
@@ -548,12 +548,34 @@ def conf_run():
     layer1 = Conv2D(3,1,8,{ "pad": 2, "stride": 2})
     #Z, cache = layer.forward(X_train_conv)
     Z1 = layer1.forward(X_train_conv)
-    print("Conv2D forward pass complete, output shape", Z1.shape)
+    print("Conv2D forward pass complete, output shape", Z1.shape) # (100,15,15,8)
+    print("Output of filter 0 for image 0 is:")
+    print_conv(Z1[0,:,:,0])
 
     # Create a max-pooling layer
     layer2 = Pooling({"f": 3, "stride": 3, "mode": "max"})
     Z2 = layer2.forward(Z1)
-    print("Pooling forward pass complete, output shape", Z2.shape)
+    print("Pooling forward pass complete, output shape", Z2.shape) # (100,5,5,8)
+    print("Max Pooled filter 0 for image 0 is:")
+    print_conv(Z2[0,:,:,0])
+
+    # create ReLU layer
+    layer3 = ReLU()
+    Z3 = layer3.forward(Z2)
+    print("ReLU forward pass complete, output shape", Z3.shape) # (100,5,5,8)
+    print("ReLU filter 0 for image 0 is:")
+    print_conv(Z3[0,:,:,0])
+
+
+def print_conv(filter_output):
+    (h,w) = filter_output.shape
+    for y in range(h):
+        for x in range(w):
+            if (filter_output[y,x]<0):
+                print(f"{filter_output[y,x]:.3f} ",end="")
+            else:
+                print( f"{filter_output[y,x]:.3f} ",end="")
+        print()
 
 # *********************************************************************
 # ******* Cross-entropy forwards and backwards         ****************
