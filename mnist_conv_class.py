@@ -197,7 +197,7 @@ class Conv2D(Layer):
         cache -- cache of values needed for the conv_backward() function
         """
 
-        print("Conv2D forward called with input",input.shape)
+        #print("Conv2D forward called with input",input.shape)
         ### START CODE HERE ###
         # Retrieve dimensions from input's shape (≈1 line)
         (count, height_in, width_in, depth_in) = input.shape
@@ -288,8 +288,8 @@ class Conv2D(Layer):
         db = np.zeros((1, 1, input_depth, filter_count)) # If input depth > 1 ??
 
         # Pad input and grad_input
-        input_pad = zero_pad(input, pad)
-        d_input_pad = zero_pad(grad_input, pad)
+        input_pad = self.zero_pad(input, pad)
+        d_input_pad = self.zero_pad(grad_input, pad)
 
         for i in range(count):                       # loop over the training examples
 
@@ -311,7 +311,7 @@ class Conv2D(Layer):
                         a_slice = example_pad[vert_start:vert_end, horiz_start:horiz_end, :]
 
                         # Update gradients for the window and the filter's parameters using the code formulas given above
-                        d_example_pad[vert_start:vert_end, horiz_start:horiz_end, :] += W[:,:,:,c] * grad_output[i, h, w, c]
+                        d_example_pad[vert_start:vert_end, horiz_start:horiz_end, :] += self.weights[:,:,:,c] * grad_output[i, h, w, c]
                         dW[:,:,:,c] += a_slice * grad_output[i, h, w, c]
                         db[:,:,:,c] += grad_output[i, h, w, c]
 
@@ -324,6 +324,9 @@ class Conv2D(Layer):
 
         return grad_input, dW, db
 
+# Call with e.g. grad_input, dW, db = conv_backward(Z, cache_conv)
+
+
     # E.g. X_test.shape is (10000,784)
     # X_test[0].shape is (784,)
     # X_test_conv = X_test.reshape(-1,28,28.1)
@@ -333,14 +336,14 @@ class Conv2D(Layer):
         as illustrated in Figure 1.
 
         Argument:
-        X -- python numpy array of shape (m, img_height, img_width, img_depth) representing:
-            m : image batch size
+        X -- python numpy array of shape (count, img_height, img_width, img_depth) representing:
+            count : image batch size
             img_height x img_width : pixel h x w = size of images
             img_depth : colors e.g. RGB = 3
         pad -- integer, amount of padding around each image on vertical and horizontal dimensions
 
         Returns:
-        X_pad -- padded image of shape (m, n_H + 2*pad, n_W + 2*pad, n_C)
+        X_pad -- padded image of shape (count, n_H + 2*pad, n_W + 2*pad, n_C)
         """
 
         ### START CODE HERE ### (≈ 1 line)
@@ -357,8 +360,6 @@ class Conv2D(Layer):
 # print("Z[3,2,1] =", Z[3,2,1])
 # print("cache_conv[0][1][2][3] =", cache_conv[0][1][2][3])
 
-
-# Call with e.g. dA, dW, db = conv_backward(Z, cache_conv)
 
 # *********************************************************************
 # ***** POOLING Layer (Max or Average)                            *****
@@ -384,15 +385,15 @@ class Pooling(Layer):
         Implements the forward pass of the pooling layer
 
         Arguments:
-        input -- Input data, numpy array of shape (m, n_H_prev, n_W_prev, n_C_prev)
+        input -- Input data, numpy array of shape (count, n_H_prev, n_W_prev, n_C_prev)
 
         Returns:
-        A -- output of the pool layer, a numpy array of shape (m, n_H, n_W, n_C)
+        A -- output of the pool layer, a numpy array of shape (count, n_H, n_W, n_C)
         cache -- cache used in the backward pass of the pooling layer, contains the input
         """
 
         # Retrieve dimensions from the input shape
-        (m, n_H_prev, n_W_prev, n_C_prev) = input.shape
+        (count, n_H_prev, n_W_prev, n_C_prev) = input.shape
 
 
         # Define the dimensions of the output
@@ -401,10 +402,10 @@ class Pooling(Layer):
         n_C = n_C_prev
 
         # Initialize output matrix A
-        A = np.zeros((m, n_H, n_W, n_C))
+        A = np.zeros((count, n_H, n_W, n_C))
 
         ### START CODE HERE ###
-        for i in range(m):                         # loop over the training examples
+        for i in range(count):                         # loop over the training examples
             for h in range(n_H):                     # loop on the vertical axis of the output volume
                 for w in range(n_W):                 # loop on the horizontal axis of the output volume
                     for c in range (n_C):            # loop over the channels of the output volume
@@ -416,13 +417,13 @@ class Pooling(Layer):
                         horiz_end = horiz_start + self.f
 
                         # Use the corners to define the current slice on the ith training example of input, channel c. (≈1 line)
-                        a_prev_slice = input[i, vert_start:vert_end, horiz_start:horiz_end, c]
+                        input_slice = input[i, vert_start:vert_end, horiz_start:horiz_end, c]
 
                         # Compute the pooling operation on the slice. Use an if statment to differentiate the modes. Use np.max/np.mean.
                         if self.mode == "max":
-                            A[i, h, w, c] = np.max(a_prev_slice)
+                            A[i, h, w, c] = np.max(input_slice)
                         elif self.mode == "average":
-                            A[i, h, w, c] = np.mean(a_prev_slice)
+                            A[i, h, w, c] = np.mean(input_slice)
 
         ### END CODE HERE ###
 
@@ -430,7 +431,7 @@ class Pooling(Layer):
         # cache = (input, hparameters)
 
         # Making sure your output shape is correct
-        assert(A.shape == (m, n_H, n_W, n_C))
+        assert(A.shape == (count, n_H, n_W, n_C))
 
         return A
 
@@ -476,33 +477,34 @@ class Pooling(Layer):
 
         return a
 
-    def backward(self, dA, input):
+    def backward(self, input, grad_output):
         """
         Implements the backward pass of the pooling layer
         Arguments:
-        dA -- gradient of cost with respect to the output of the pooling layer, same shape as A
-        input -- output from the forward pass of the pooling layer, contains the layer's input
+            input -- output from the forward pass of the pooling layer, contains the layer's input
+            grad_output -- gradient of cost with respect to the output of the pooling layer, same shape as input
 
         Returns:
-        d_input -- gradient of cost with respect to the input of the pooling layer, same shape as input
+            d_input -- gradient of cost with respect to the input of the pooling layer, same shape as input
         """
 
-        ### START CODE HERE ###
+        #print(f"Pooling.backward called input {input.shape}, grad_output {grad_output.shape}")
 
         # Retrieve information from cache (≈1 line)
         #(input, hparameters) = cache
 
-        # Retrieve dimensions from input's shape and dA's shape (≈2 lines)
-        m, n_H_prev, n_W_prev, n_C_prev = input.shape
-        m, n_H, n_W, n_C = dA.shape
+        # Retrieve dimensions from input's shape and grad_output's shape (≈2 lines)
+        count, n_H_prev, n_W_prev, n_C_prev = input.shape
+        count, n_H, n_W, n_C = grad_output.shape
 
         # Initialize d_input with zeros (≈1 line)
-        d_input = np.zeros(m, n_H, n_W, n_C)
+        # d_input = np.zeros((count, n_H, n_W, n_C)) # is this a BUG? Should be input shape
+        d_input = np.zeros((count, n_H_prev, n_W_prev, n_C_prev))
 
-        for i in range(m):  # loop over the training examples
+        for i in range(count):  # loop over the training examples
 
             # select training example from input (≈1 line)
-            a_prev = input[i, :, :, :]
+            example = input[i, :, :, :]
 
             for h in range(n_H):  # loop on the vertical axis
                 for w in range(n_W):  # loop on the horizontal axis
@@ -517,21 +519,24 @@ class Pooling(Layer):
                         # Compute the backward propagation in both modes.
                         if self.mode == "max":
 
-                            # Use the corners and "c" to define the current slice from a_prev (≈1 line)
-                            a_prev_slice = a_prev[horiz_start:horiz_end, vert_start:vert_end, c]
-                            # Create the mask from a_prev_slice (≈1 line)
-                            mask = self.create_mask_from_window(a_prev_slice)
-                            # Set d_input to be d_input + (the mask multiplied by the correct entry of dA) (≈1 line)
-                            d_input[i, vert_start: vert_end, horiz_start: horiz_end, c] += a_prev_slice * mask
+                            # Use the corners and "c" to define the current slice from example (≈1 line)
+                            example_slice = example[horiz_start:horiz_end, vert_start:vert_end, c]
+                            #print(f"Pooling.backward input[{i}] {input[i].shape}, example_slice {example_slice.shape}")
+                            # Create the mask from example_slice (≈1 line)
+                            mask = self.create_mask_from_window(example_slice)
+                            #print(f"Pooling.backward mask {mask.shape}")
+                            #print(f"Pooling.backward Updating d_input {d_input.shape}")
+                            # Set d_input to be d_input + (the mask multiplied by the correct entry of grad_output) (≈1 line)
+                            d_input[i, vert_start:vert_end, horiz_start:horiz_end, c] += example_slice * mask
 
                         elif self.mode == "average":
 
-                            # Get the value a from dA (≈1 line)
-                            da = np.sum(a_prev[horiz_start:horiz_end, vert_start:vert_end, c])
+                            # Get the value a from grad_output (≈1 line)
+                            da = np.sum(example[horiz_start:horiz_end, vert_start:vert_end, c])
                             # Define the shape of the filter as fxf (≈1 line)
-                            shape = (self.f, self.f)
+                            filter_shape = (self.f, self.f)
                             # Distribute it to get the correct slice of d_input. i.e. Add the distributed value of da. (≈1 line)
-                            d_input[i, vert_start: vert_end, horiz_start: horiz_end, c] += self.distribute_value(da, shape)
+                            d_input[i, vert_start: vert_end, horiz_start: horiz_end, c] += self.distribute_value(da, filter_shape)
 
         ### END CODE ###
 
@@ -540,42 +545,76 @@ class Pooling(Layer):
 
         return d_input
 
-def conv_run():
-    # Test train on first 100 images
-    X_train_conv = X_train.reshape(-1,28,28,1)[:100]
+# *********************************************************************
+# ***** FLATTEN                                                   *****
+# *********************************************************************
 
-    # Create 3x3x1 conv filters x8
-    layer1 = Conv2D(3,1,8,{ "pad": 2, "stride": 2})
-    #Z, cache = layer.forward(X_train_conv)
-    Z1 = layer1.forward(X_train_conv)
-    print("Conv2D forward pass complete, output shape", Z1.shape) # (100,15,15,8)
-    print("Output of filter 0 for image 0 is:")
-    print_conv(Z1[0,:,:,0])
+class Flatten(Layer):
+    def __init__(self):
+        """
+        Provides forwards/backwards flatten a (count,A,B,C,..) multi-dimensional input into (count,N)
+        Particularly suited to flattening the output of convolutional layers
+        """
+        print(f"Flatten layer initialized")
 
-    # Create a max-pooling layer
-    layer2 = Pooling({"f": 3, "stride": 3, "mode": "max"})
-    Z2 = layer2.forward(Z1)
-    print("Pooling forward pass complete, output shape", Z2.shape) # (100,5,5,8)
-    print("Max Pooled filter 0 for image 0 is:")
-    print_conv(Z2[0,:,:,0])
+    def forward(self, input):
+        """
+        Implements the forward pass of the pooling layer
+        """
+        self.shape = input.shape
+        return input.reshape(input.shape[0],-1)
 
-    # create ReLU layer
-    layer3 = ReLU()
-    Z3 = layer3.forward(Z2)
-    print("ReLU forward pass complete, output shape", Z3.shape) # (100,5,5,8)
-    print("ReLU filter 0 for image 0 is:")
-    print_conv(Z3[0,:,:,0])
+    def backward(self, input, grad_output):
+        """
+        Implements backward pass of flatten layer
+        """
 
+        # assumes a forward pass has preceded this backward call
+        return grad_output.reshape(self.shape)
 
-def print_conv(filter_output):
-    (h,w) = filter_output.shape
-    for y in range(h):
-        for x in range(w):
-            if (filter_output[y,x]<0):
-                print(f"{filter_output[y,x]:.3f} ",end="")
-            else:
-                print( f"{filter_output[y,x]:.3f} ",end="")
-        print()
+# *********************************************************************
+# ***** SOFTMAX                                                   *****
+# *********************************************************************
+
+# https://e2eml.school/softmax.html
+# https://stackoverflow.com/questions/40575841/numpy-calculate-the-derivative-of-the-softmax-function
+
+class Softmax(Layer):
+    def __init__(self):
+        """
+        Forwards/backwards compute of Softmax function
+        """
+        print(f"Softmax layer initialized")
+
+    def forward(self,input):
+        """Compute the softmax of count vectors."""
+        count, width = input.shape
+        output = np.empty((count,width))
+        for i in range(count):
+            exps = np.exp(input[i] - input[i].max())
+            sm = exps / np.sum(exps)
+            output[i,:] = sm
+        return output
+
+    def backward(self, input, grad_output):
+        """
+            input - input provided on most recent forward pass
+            grad_output - gradients presented upward from next layer
+        """
+        print(f"Softmax.backward called input {input.shape}, grad_output {grad_output.shape}")
+        count, width = input.shape
+        # Init the array we will return
+        input_grad = np.empty((count,width))
+        for i in range(count):
+            # recalculate softmax output (could cache this), reshape to single row
+            exps = np.exp(input[i] - input[i].max())
+            sm = exps / np.sum(exps)
+            grads = grad_output[i].reshape(1,-1) # also reshape to single row
+            d_softmax = (sm * np.identity(sm.size) - sm.transpose() @ sm)
+            example_grads = grads @ d_softmax
+            #print(f"Softmax.backward example_grads {example_grads.shape}")
+            input_grad[i,:] = example_grads
+        return input_grad
 
 # *********************************************************************
 # ******* Cross-entropy forwards and backwards         ****************
@@ -650,6 +689,7 @@ def train_batch(network,X,y):
     # Then we can run layer.backward going from last to first layer.
     # After we have called backward for all layers, all Dense layers have already made one gradient step.
 
+    #print("train_batch")
 
     # Get the layer activations
     layer_activations = forward(network,X)
@@ -692,7 +732,7 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
 # ************************************************************
 # ******* Network TRAIN function                  ************
 # ************************************************************
-def train(network, batchsize=32, shuffle=True):
+def train(network, X_train, y_train, X_val, y_val, batchsize=32, shuffle=True):
     # We'll accumulate a log of accuracy figures for the training dataset and validation data set
     train_accuracy = []
     val_accuracy = []
@@ -738,7 +778,18 @@ def print_image(image):
             print( '  ' if image[i*28+j] > 0.5 else '00', end='')
         print()
 
-# Print logits
+# Print any 2D H x W matrix to the console
+def print_2D(filter_output):
+    (h,w) = filter_output.shape
+    for y in range(h):
+        for x in range(w):
+            if (filter_output[y,x]<0):
+                print(f"{filter_output[y,x]:.3f} ",end="")
+            else:
+                print( f"{filter_output[y,x]:.3f} ",end="")
+        print()
+
+# Print list of logits
 def print_logits(logits):
     for n in logits:
         if (n<0):
@@ -779,8 +830,8 @@ X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(flatten=True)
 print(f"X_train is {X_train.shape}")
 print(f"X_val is {X_val.shape}")
 print(f"X_test is {X_test.shape}")
-print("X_test[0] is:")
-print_image(X_test[0])
+#print("X_test[0] is:")
+#print_image(X_test[0])
 
 net_agrawal = [
     Dense(784,100),
@@ -796,4 +847,62 @@ net_lewis = [
     Dense(100,10)
 ]
 
-# train(net_agrawal)
+net_conv = [
+    Conv2D(3,1,8,{ "pad": 2, "stride": 2}),
+    Pooling({"f": 3, "stride": 3, "mode": "max"}),
+    ReLU(),
+    Flatten(),
+    Dense(200,10)
+]
+
+def conv_forward(X_train_conv):
+
+    # Create 3x3x1 conv filters x8
+    layer1 = Conv2D(3,1,8,{ "pad": 2, "stride": 2})
+    #Z, cache = layer.forward(X_train_conv)
+    Z1 = layer1.forward(X_train_conv)
+    print("Conv2D forward pass complete, output shape", Z1.shape) # (100,15,15,8)
+    print("Output of filter 0 for image 0 is:")
+    print_conv(Z1[0,:,:,0])
+
+    # Create a max-pooling layer
+    layer2 = Pooling({"f": 3, "stride": 3, "mode": "max"})
+    Z2 = layer2.forward(Z1)
+    print("Pooling forward pass complete, output shape", Z2.shape) # (100,5,5,8)
+    print("Max Pooled filter 0 for image 0 is:")
+    print_conv(Z2[0,:,:,0])
+
+    # create ReLU layer
+    layer3 = ReLU()
+    Z3 = layer3.forward(Z2)
+    print("ReLU forward pass complete, output shape", Z3.shape) # (100,5,5,8)
+    print("ReLU filter 0 for image 0 is:")
+    print_conv(Z3[0,:,:,0])
+
+    # Create Flatten layer
+    layer4 = Flatten()
+    Z4 = layer4.forward(Z3)
+    print("Flatten forward pass complete, output shape", Z4.shape) # (100,200)
+
+    # Create Dense layer
+    layer5 = Dense(200,10)
+    Z5 = layer5.forward(Z4)
+    print("Dense forward pass complete, output shape", Z5.shape) # (100,10)
+
+    # Create Softmax layer
+    layer6 = Softmax()
+    Z6 = layer6.forward(Z5)
+    print("Softmax forward pass complete, output shape", Z6.shape) # (100,10)
+
+    return Z6
+
+# Test train on first 100 images
+X_train_conv = X_train.reshape(-1,28,28,1)
+y_train_conv = y_train
+
+X_val_conv = X_val.reshape(-1,28,28,1)[:200]
+y_val_conv = y_val[:200]
+
+
+# train(net_agrawal, X_train, y_train, X_val, y_val)
+# train(net_conv, X_train_conv, y_train_conv, X_val_conv, y_val_conv)
