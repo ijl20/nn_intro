@@ -30,6 +30,8 @@ model_lewis.add(Dense(10, activation="softmax"))
 Build a single fully-connected-layer network with numpy to recognize hand-written
 digits in the MNIST data set.
 
+[Readme and source files here](https://github.com/ijl20/nn_intro/tree/main/mnist_weisberg).
+
 Ref: [Building a Neural Network from Scratch: Part 1](https://jonathanweisberg.org/post/A%20Neural%20Network%20from%20Scratch%20-%20Part%201/)
 
 See source file in this repo `mnist_weisberg.py`
@@ -37,6 +39,8 @@ See source file in this repo `mnist_weisberg.py`
 ## MNIST (Aayush) Agrawal - restructure NN code using Python classes for each layer type
 
 Similar to Weisberg, but abstracting the layers into Python classes.
+
+[Readme and source files here](https://github.com/ijl20/nn_intro/tree/main/mnist_agrawal).
 
 There are copied and changed versions of this article but the reference below is preferred.
 
@@ -51,9 +55,13 @@ Adding new layer classes for
 * Pooling (max & average)
 * Softmax
 
+[Readme and source files here](https://github.com/ijl20/nn_intro/tree/main/mnist_conv).
+
 ## MNIST Keras
 
-MNIST digit recognition using keras/tensorflow API
+MNIST digit recognition using keras/tensorflow API - intentionally a very similar layout to the pure Prolog class-based layers used in mnist-conv above, which were developed specifically to illustrate the similarity with what you would code using the keras API.
+
+[Readme and source files here](https://github.com/ijl20/nn_intro/tree/main/mnist_keras).
 
 ## Initial setup steps
 ### Build a Linux server
