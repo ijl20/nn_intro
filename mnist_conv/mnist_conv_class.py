@@ -143,14 +143,14 @@ class Conv2D(Layer):
         print(f"Conv2D initialized with {filter_count} filters, each {filter_size}x{filter_size}x{input_depth}")
         print(f'Conv2D params are pad={hparams["pad"]}, stride={hparams["stride"]}')
 
-    def forward_single_step(self, img_patch, filter_W, filter_b):
+    def forward_single_step(self, input_example_slice, filter_W, filter_b):
         """
         Apply one filter defined by parameters W on a single slice (a_slice_prev) of the output activation
         of the previous layer.
 
         Arguments:
         Note filter size is f x f, with the same depth as the input image
-        img_patch -- slice of input data of shape (f, f, depth_in)
+        input_example_slice -- slice of input data of shape (f, f, depth_in)
         filter_W -- Weight parameters contained in a window - matrix of shape (f, f, depth_in)
         filter_b -- Bias parameters contained in a window - matrix of shape (1, 1, 1)
 
@@ -158,15 +158,15 @@ class Conv2D(Layer):
         Z -- a scalar value, result of convolving the sliding window (W, self.biases) on a slice x of the input data
         """
 
-        #print("conv_single_step img_patch:", img_patch.shape)
-        #print(img_patch)
+        #print("conv_single_step input_example_slice:", input_example_slice.shape)
+        #print(input_example_slice)
 
         #print("conv_single_step filter_W:", filter_W.shape)
         #print(filter_W)
 
         ### START CODE HERE ### (≈ 2 lines of code)
-        # Element-wise product between a_slice and W. Do not add the bias yet.
-        s = np.multiply(img_patch, filter_W)
+        # Element-wise product between input_example_slice and filter_W. Do not add the bias yet.
+        s = np.multiply(input_example_slice, filter_W)
 
         #print("conv_single_step s:", s.shape)
         #print(s)
@@ -221,7 +221,7 @@ class Conv2D(Layer):
         input_pad = self.zero_pad(input, pad)
 
         for i in range(count):                                 # loop over the batch of training examples
-            example_img = input_pad[i]                     # Select ith training example's padded activation
+            input_example = input_pad[i]                     # Select ith training example's padded activation
             for h in range(output_height):                           # loop over vertical axis of the output volume
                 for w in range(output_width):                       # loop over horizontal axis of the output volume
                     for c in range(filter_count):                   # loop over channels (= #filters) of the output volume
@@ -232,11 +232,11 @@ class Conv2D(Layer):
                         horiz_start = w * stride
                         horiz_end = horiz_start + f
 
-                        # Use the corners to define the (3D) slice of example_img (See Hint above the cell). (≈1 line)
-                        img_patch = example_img[vert_start:vert_end, horiz_start:horiz_end, :]
+                        # Use the corners to define the (3D) slice of input_example (See Hint above the cell). (≈1 line)
+                        input_example_slice = input_example[vert_start:vert_end, horiz_start:horiz_end, :]
 
                         # Convolve the (3D) slice with the correct filter weights and biases, to get back one output neuron. (≈1 line)
-                        Z[i, h, w, c] = self.forward_single_step(img_patch, self.weights[...,c], self.biases[...,c])
+                        Z[i, h, w, c] = self.forward_single_step(input_example_slice, self.weights[...,c], self.biases[...,c])
                         # Add activation here: A[i, h, w, c] = activation(Z[i, h, w, c])
         ### END CODE HERE ###
 
@@ -254,6 +254,7 @@ class Conv2D(Layer):
         Implement the backward propagation for a convolution function
 
         Arguments:
+
         grad_output -- gradient of the cost with respect to the output of the conv layer (Z),
                        shape (count, output_height, output_width, filter_count)
 
@@ -294,7 +295,7 @@ class Conv2D(Layer):
         for i in range(count):                       # loop over the training examples
 
             # select ith training example from input_pad and d_input_pad
-            example_pad = input_pad[i]      # example_pad = input_pad[i, :, :, :]
+            input_example_pad = input_pad[i]      # input_example_pad = input_pad[i, :, :, :]
             d_example_pad = d_input_pad[i]    # d_example_pad = d_input_pad[i, :, :, :]
 
             for h in range(output_height):                   # loop over vertical axis of the output volume
@@ -307,8 +308,8 @@ class Conv2D(Layer):
                         horiz_start = stride * w
                         horiz_end = horiz_start + f
 
-                        # Use the corners to define the slice from example_pad
-                        a_slice = example_pad[vert_start:vert_end, horiz_start:horiz_end, :]
+                        # Use the corners to define the slice from input_example_pad
+                        a_slice = input_example_pad[vert_start:vert_end, horiz_start:horiz_end, :]
 
                         # Update gradients for the window and the filter's parameters using the code formulas given above
                         d_example_pad[vert_start:vert_end, horiz_start:horiz_end, :] += self.weights[:,:,:,c] * grad_output[i, h, w, c]
@@ -899,6 +900,9 @@ def conv_forward(X_train_conv):
 # Test train on first 100 images
 X_train_conv = X_train.reshape(-1,28,28,1)
 y_train_conv = y_train
+
+X_test_conv = X_test.reshape(-1,28,28,1)
+y_test_conv = y_test
 
 X_val_conv = X_val.reshape(-1,28,28,1)[:200]
 y_val_conv = y_val[:200]
