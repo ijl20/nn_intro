@@ -4,7 +4,7 @@ This is pretty much the simplest Python to define a single Dense x 784 layer plu
 recognize the MNIST digits.
 
 Note for this example, the classification is for ZERO or NON-ZERO, rather than ZERO through NINE. The downloaded MNIST
-data set includes 0..9 'truth' values for each image, but we map this to values of 0 (for zeroes) and 1 (for all other digits)
+data set includes 0..9 'truth' values for each image, but we map this to values of 1 (for zeroes) and 0 (for all other digits)
 for the network to train with.
 
 ```
