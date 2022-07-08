@@ -2,7 +2,7 @@
 # https://towardsdatascience.com/building-neural-network-from-scratch-9c88535bf8e9
 
 # Typical usage:
-# >>> exec(open("mnist_agrawal2.py").read())
+# >>> exec(open("mnist_agrawal.py").read())
 # >>> train(net_agrawal)
 # >>> predict(net_agrawal, [ X_test[0] ])
 
