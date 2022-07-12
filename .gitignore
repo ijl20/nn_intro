@@ -135,3 +135,5 @@ dmypy.json
 
 secrets/
 
+keras-yolo3/yolov3.weights
+
