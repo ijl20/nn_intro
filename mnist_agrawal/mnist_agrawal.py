@@ -274,29 +274,36 @@ def print_logits(logits):
 # Print category, e.g. 0 -> "ZERO"
 # Python 3.10 only
 def print_category(n):
-    match n:
-        case 0:
-            print("ZERO")
-        case 1:
-            print("ONE")
-        case 2:
-            print("TWO")
-        case 3:
-            print("THREE")
-        case 4:
-            print("FOUR")
-        case 5:
-            print("FIVE")
-        case 6:
-            print("SIX")
-        case 7:
-            print("SEVEN")
-        case 8:
-            print("EIGHT")
-        case 9:
-            print("NINE")
-        case _:
-            print("ERROR")
+    if n == 0:
+        print("ZERO")
+    if n == 1:
+        print("ONE")
+    if n == 2:
+        print("TWO")
+    if n == 3:
+        print("THREE")
+    if n == 4:
+        print("FOUR")
+    if n == 5:
+        print("FIVE")
+    if n == 6:
+        print("SIX")
+    if n == 7:
+        print("SEVEN")
+    if n == 8:
+        print("EIGHT")
+    if n == 9:
+        print("NINE")
+
+def test(network, start=0):
+    i = start
+    while True:
+        p = predict(network,[X_test[i]])
+        print(f"Image {i} predict {p} vs {y_test[i]}")
+        if not (p==y_test[i]):
+            infer(network, X_test[i])
+            break
+        i = i + 1
 
 X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(flatten=True)
 
