@@ -1,5 +1,6 @@
 wheel
 numpy
+opencv-python
 notebook
 tensorflow
 matplotlib
